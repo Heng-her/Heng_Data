@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Product Manager</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 8px; }
+    th { background-color: #f2f2f2; }
+    input { margin-bottom: 10px; padding: 6px; }
+  </style>
+</head>
+<body>
+  <h2>Product Manager</h2>
+
+  <input type="hidden" id="p_id">
+  <input type="text" id="p_name" placeholder="Product Name"><br>
+  <input type="number" id="p_price" placeholder="Product Price"><br>
+  <input type="number" id="p_quantity" placeholder="Quantity"><br>
+  <button onclick="saveProduct()">Save Product</button>
+  <button onclick="clearForm()">Clear</button>
+
+  <h3>Products List</h3>
+  <table id="productTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Price ($)</th>
+        <th>Quantity</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const storageKey = 'products';
+
+    function getProducts() {
+      return JSON.parse(localStorage.getItem(storageKey)) || [];
+    }
+
+    function saveProducts(products) {
+      localStorage.setItem(storageKey, JSON.stringify(products));
+    }
+
+    function renderProducts() {
+      const products = getProducts().filter(p => !p.deleted_at);
+      const tbody = document.querySelector('#productTable tbody');
+      tbody.innerHTML = '';
+      products.forEach(p => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${p.p_name}</td>
+          <td>${p.p_price}</td>
+          <td>${p.p_quantity}</td>
+          <td>${new Date(p.created_at).toLocaleString()}</td>
+          <td>
+            <button onclick="editProduct('${p.p_id}')">Edit</button>
+            <button onclick="deleteProduct('${p.p_id}')">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function saveProduct() {
+      const id = document.getElementById('p_id').value;
+      const name = document.getElementById('p_name').value.trim();
+      const price = parseFloat(document.getElementById('p_price').value);
+      const quantity = parseInt(document.getElementById('p_quantity').value);
+
+      if (!name || isNaN(price) || isNaN(quantity)) {
+        alert('Please enter valid product data.');
+        return;
+      }
+
+      const products = getProducts();
+      if (id) {
+        // Update
+        const index = products.findIndex(p => p.p_id === id);
+        if (index !== -1) {
+          products[index].p_name = name;
+          products[index].p_price = price;
+          products[index].p_quantity = quantity;
+        }
+      } else {
+        // Insert
+        const newProduct = {
+          p_id: crypto.randomUUID(),
+          p_name: name,
+          p_price: price,
+          p_quantity: quantity,
+          created_at: new Date().toISOString(),
+          deleted_at: null
+        };
+        products.push(newProduct);
+      }
+
+      saveProducts(products);
+      clearForm();
+      renderProducts();
+    }
+
+    function editProduct(id) {
+      const product = getProducts().find(p => p.p_id === id);
+      if (product) {
+        document.getElementById('p_id').value = product.p_id;
+        document.getElementById('p_name').value = product.p_name;
+        document.getElementById('p_price').value = product.p_price;
+        document.getElementById('p_quantity').value = product.p_quantity;
+      }
+    }
+
+    function deleteProduct(id) {
+      const products = getProducts();
+      const index = products.findIndex(p => p.p_id === id);
+      if (index !== -1) {
+        products[index].deleted_at = new Date().toISOString(); // soft delete
+        saveProducts(products);
+        renderProducts();
+      }
+    }
+
+    function clearForm() {
+      document.getElementById('p_id').value = '';
+      document.getElementById('p_name').value = '';
+      document.getElementById('p_price').value = '';
+      document.getElementById('p_quantity').value = '';
+    }
+
+    // Initial load
+    renderProducts();
+  </script>
+</body>
+</html>
